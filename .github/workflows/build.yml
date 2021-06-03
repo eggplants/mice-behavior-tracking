@@ -145,3 +145,13 @@ jobs:
           asset_path: ./tracking_GUI-windows.zip
           asset_name: tracking_GUI-windows.zip
           asset_content_type: application/zip
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./tracking_GUI-windows.zip
+          asset_name: tracking_GUI-windows.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: "${{ github.ref }} release"
