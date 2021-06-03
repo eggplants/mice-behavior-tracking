@@ -3,6 +3,10 @@ import statistics
 
 from pynput import mouse  # please use v1.6.8
 
+#
+# This code might not run correctly! Use tracking_GUI.py
+#
+
 info = {
     'x_pos': [],
     'y_pos': [],

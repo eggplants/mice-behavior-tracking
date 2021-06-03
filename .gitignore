@@ -148,3 +148,4 @@ venv/
 __pycache__/
 *.spec
 *.csv
+*.avi

@@ -1,3 +1,8 @@
+
+#
+# This code might not run correctly! Use tracking_GUI.py
+#
+
 import time
 from datetime import datetime
 

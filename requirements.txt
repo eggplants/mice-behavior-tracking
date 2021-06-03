@@ -3,3 +3,4 @@ numpy
 pyserial
 pynput==1.6.8
 PyInstaller
+easygui
