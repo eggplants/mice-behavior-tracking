@@ -2,7 +2,11 @@
 
 [![Build](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml/badge.svg)](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml)
 
-## Build
+## Binaries (win, mac, linux)
+
+See: [Releases](https://github.com/eggplants/mice-behavior-tracking/releases)
+
+## Local build
 
 ```bash
 pyinstaller tracking.py --onefile -i icon.ico
