@@ -1,0 +1,147 @@
+name: push
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@master
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@master
+        with: { python-version: 3.8 }
+
+      - name: Upgrade pip
+        run: |
+        	python -m pip install -U pip PyInstaller
+        	python -m pip install -r requirements.txt
+
+      - name: build
+        run: pyinstaller -F src/tracking_GUI.py
+
+      - name: upload
+        uses: actions/upload-artifact@v1
+        with:
+          name: tracking_GUI-windows
+          path: dist/tracking_GUI.exe
+
+  # macOS-build:
+  #   runs-on: macOS-latest
+  #   steps:
+  #     - name: Checkout commit
+  #       uses: actions/checkout@master
+
+  #     - name: Set up Python 3.8
+  #       uses: actions/setup-python@master
+  #       with: { python-version: 3.8 }
+
+  #     - name: Upgrade pip
+  #       run: |
+        	# python -m pip install -U pip PyInstaller
+        	# python -m pip install -r requirements.txt
+
+  #     - name: build
+  #       run: pyinstaller -F src/tracking_GUI.py
+
+  #     - name: upload
+  #       uses: actions/upload-artifact@v1
+  #       with:
+  #         name: tracking_GUI-macos
+  #         path: dist/tracking_GUI
+
+  # ubuntu-build:
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Checkout commit
+  #       uses: actions/checkout@master
+
+  #     - name: Set up Python 3.8
+  #       uses: actions/setup-python@master
+  #       with: { python-version: 3.8 }
+
+  #     - name: Upgrade pip
+  #       run: |
+        	# python -m pip install -U pip PyInstaller
+        	# python -m pip install -r requirements.txt
+
+  #     - name: build
+  #       run: pyinstaller -F src/tracking_GUI.py
+
+  #     - name: upload
+  #       uses: actions/upload-artifact@v1
+  #       with:
+  #         name: tracking_GUI-linux
+  #         path: dist/tracking_GUI
+
+  release:
+    # needs: [ubuntu-build, macOS-build, windows-build]
+    needs: [windows-build]
+    runs-on: ubuntu-latest
+
+    steps:
+      # - name: Download Linux
+      #   uses: actions/download-artifact@v1
+      #   with:
+      #     name: tracking_GUI-linux
+
+      # - name: Download Mac
+      #   uses: actions/download-artifact@v1
+      #   with:
+      #     name: tracking_GUI-macos
+
+      - name: Download Windows
+        uses: actions/download-artifact@v1
+        with:
+          name: tracking_GUI-windows
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Zip
+        run: |
+          # tar -C tracking_GUI-macos -pczvf tracking_GUI-macos.tar.gz tracking_GUI
+          # tar -C tracking_GUI-linux -pczvf tracking_GUI-linux.tar.gz tracking_GUI
+          zip --junk-paths tracking_GUI-windows ./tracking_GUI-windows/tracking_GUI.exe
+
+      # - name: Append mac Binary
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./tracking_GUI-macos.tar.gz
+      #     asset_name: tracking_GUI-macos.tar.gz
+      #     asset_content_type: application/gzip
+
+      # - name: Append linux Binary
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: ./tracking_GUI-linux.tar.gz
+      #     asset_name: tracking_GUI-linux.tar.gz
+      #     asset_content_type: application/gzip
+
+      - name: Append win Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./tracking_GUI-windows.zip
+          asset_name: tracking_GUI-windows.zip
+          asset_content_type: application/zip
