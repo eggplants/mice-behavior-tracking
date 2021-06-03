@@ -1,11 +1,18 @@
 # mouse behavior tracking
 
-## how to build (for windows)
+[![push](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml/badge.svg)](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml)
+
+## Build
 
 ```bash
-# release dist
-pyinstaller -F src/tracking_GUI.py -i icon.ico
+pyinstaller tracking.py --onefile -i icon.ico
 ```
 
-original code written by [natsukacha](https://github.com/natsukacha)
-icon from <https://icon-icons.com/icon/testing-mouse-sciencie-scientific/53002>
+## Author
+
+- original code written by [natsukacha](https://github.com/natsukacha)
+- modified by [eggplants](https://github.com/eggplants)
+
+## Icon
+
+- <https://icon-icons.com/icon/testing-mouse-sciencie-scientific/53002>
