@@ -1,9 +1,8 @@
 import time
-# import tkinter as tk
+import getpass
 from datetime import datetime
 
 import cv2
-import easygui
 import numpy as np
 import serial
 from serial.tools import list_ports
@@ -15,14 +14,8 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\___\___|      \__|_|  \__,_|\___|_|\_\_|_| |_|\__, |
                                                             |___/
+v0.7
 '''
-
-
-def show_window(title: str, message: str, exit_: bool = False) -> None:
-    easygui.msgbox(title, message)
-    if exit_:
-        exit(1)
-
 
 class DeviceInfo():
     def __init__(self):
@@ -32,112 +25,8 @@ class DeviceInfo():
 class TrackingError(Exception):
     pass
 
-# def get_device_num(message, device_info):
-#     root = tk.Tk()
-#     frame = tk.Frame(root)
-#     label = tk.Label(frame, text=message)
-#     t = tk.IntVar()
-#     entry = tk.Entry(frame, textvariable=t)
 
-#     def onclick():
-#         num = t.get()
-#         device_info.num = num
-#         root.destroy()
-
-#     button = tk.Button(frame, text='OK', command=onclick)
-#     frame.pack()
-#     label.pack(side=tk.LEFT)
-#     entry.pack(side=tk.LEFT)
-#     button.pack(side=tk.LEFT)
-#     root.mainloop()
-
-
-def get_ans(question, selections=["y", "n"]):
-    reply = input(question)
-    selections = list(map(str,  selections))
-    if reply in selections:
-        return reply
-    else:
-        return get_ans("invalid answer. retry: ", selections)
-
-
-# def raise_error(message):
-#     root = tk.Tk()
-#     frame = tk.Frame(root)
-#     label = tk.Label(frame, text=message)
-
-#     def onclick():
-#         root.destroy()
-#         exit()
-
-#     button = tk.Button(frame, text='OK', command=onclick)
-#     frame.pack()
-#     label.pack(side=tk.LEFT)
-#     button.pack(side=tk.LEFT)
-#     root.mainloop()
-
-
-def strlist_to_comma_str(lis):
-    return ", ".join(map(str, lis))
-
-
-def select_port():
-    ser = serial.Serial()
-    ser.baudrate = 9600  # same as Serial.begin in Arduino
-    ser.timeout = 0.1
-    print('[Serial Device]')
-    print('Checking serial devices... (baudrate: {}, timeout: {})'.format(
-        ser.baudrate, ser.timeout))
-
-    ports = list_ports.comports()  # get port data
-    devices = [info.device for info in ports]
-    if len(devices) == 0:
-        show_window(str(type(TrackingError)),
-                    "Error: serial device not found")
-        raise TrackingError('Error: serial device not found')
-    elif len(devices) == 1:
-        print('=> Only found: %s' % devices[0])
-        ser.port = devices[0]
-    else:
-        print('=> Some found:')
-        for i in range(len(devices)):
-            print('%3d: open %s' % (i, devices[i]))
-        device_info = DeviceInfo()
-        dev_comma_sep = strlist_to_comma_str([*range(len(devices))])
-        device_num = get_ans('Select one target port ({}): '.format(
-            dev_comma_sep), [*range(len(devices))])
-        device_info.num = int(device_num)
-        ser.port = devices[device_info.num]
-
-    try:
-        ser.open()
-        return ser
-    except Exception as e:
-        show_window(str(type(e)), "Error: occurs when opening serial")
-        raise TrackingError('Error: error occurs when opening serial')
-
-# check connection
-
-
-def show_connection(ser):
-    t = 0
-    while t < 3:
-        startshow = str(60000)
-        ser.write(startshow.encode('utf-8'))
-        ser.write(b'\n')
-        ser.reset_output_buffer()
-        time.sleep(0.5)
-
-        startshow_2 = str(0)
-        ser.write(startshow_2.encode('utf-8'))
-        ser.write(b'\n')
-        ser.reset_output_buffer()
-        time.sleep(0.5)
-
-        t += 1
-
-
-class mouseinfo():
+class MouseInfo():
     def init(self):
         self.mb = []
         self.centerX = []
@@ -163,6 +52,25 @@ class mouseinfo():
             (self.centlist[i] - np.mean(self.centlist))/np.std(self.centlist))
 
 
+def show_window(title: str, message: str,
+                button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
+    print('[{}]: {}'.format(title, message))
+    getpass.getpass('[{}]'.format(button))
+    # import easygui
+    # easygui.msgbox(title, message)
+    if exit_:
+        exit(1)
+
+
+def get_ans(question, selections=["y", "n"]):
+    reply = input(question)
+    selections = list(map(str,  selections))
+    if reply in selections:
+        return reply
+    else:
+        return get_ans("invalid answer. retry: ", selections)
+
+
 def get_cams_list():
     index = 0
     arr = []
@@ -178,10 +86,63 @@ def get_cams_list():
     return arr
 
 
-def video_body(ser, C):
+def strlist_to_comma_str(lis):
+    return ", ".join(map(str, lis))
+
+
+def show_connection(ser) => None:
+    for i in range(3):
+        startshow = str(60000)
+        ser.write(startshow.encode('utf-8'))
+        ser.write(b'\n')
+        ser.reset_output_buffer()
+        time.sleep(0.5)
+
+        startshow_2 = str(0)
+        ser.write(startshow_2.encode('utf-8'))
+        ser.write(b'\n')
+        ser.reset_output_buffer()
+        time.sleep(0.5)
+
+
+def select_port():
+    ser = serial.Serial()
+    ser.baudrate = 9600  # same as Serial.begin in Arduino
+    ser.timeout = 0.1
+    print('[Serial Device]')
+    print('Checking serial devices... (baudrate: {}, timeout: {})'.format(
+        ser.baudrate, ser.timeout))
+
+    ports = list_ports.comports()  # get port data
+    devices = [info.device for info in ports]
+    if len(devices) == 0:
+        show_window(str(type(TrackingError)),
+                    "Error: serial device not found", exit_ = True)
+        raise TrackingError('Error: serial device not found')
+    elif len(devices) == 1:
+        print('=> Only found: %s' % devices[0])
+        ser.port = devices[0]
+    else:
+        print('=> Some found:')
+        for i in range(len(devices)):
+            print('%3d: open %s' % (i, devices[i]))
+        device_info = DeviceInfo()
+        dev_comma_sep = strlist_to_comma_str([*range(len(devices))])
+        device_num = get_ans('Select one target port ({}): '.format(
+            dev_comma_sep), [*range(len(devices))])
+        device_info.num = int(device_num)
+        ser.port = devices[device_info.num]
+
+    try:
+        ser.open()
+        return ser
+    except Exception as e:
+        show_window(str(type(e)), "Error: occurs when opening serial", exit_=True)
+        raise TrackingError('Error: error occurs when opening serial')
+
+        
+def select_cam_device_num():
     print('[Camera Device]')
-    # set cam device num:
-    camera_info = DeviceInfo()
     print('Checking camera devices...')
     cam_list = get_cams_list()
     print('=>', cam_list)
@@ -189,8 +150,10 @@ def video_body(ser, C):
         get_ans('Select one camera device ({}): '.format(
             strlist_to_comma_str(cam_list)),
             cam_list))
-    camera_info.num = device_num
+    return device_num
 
+
+def select_options():
     print('[Options]')
     # set if save:
     if get_ans('Save video(.avi) ? (y/n): ') == 'y':
@@ -202,8 +165,10 @@ def video_body(ser, C):
         save_csv = True
     else:
         save_csv = False
+    return {'save_video': save_video, 'save_csv': save_csv}
 
-    show_window('If you quit, type "q"', 'info', False)
+
+def video_body(select_port, mouse_info, camera_info, save_video, save_csv):
     cap = cv2.VideoCapture(camera_info.num)
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     nowtime = str(datetime.now())
@@ -236,17 +201,17 @@ def video_body(ser, C):
             op = cv2.morphologyEx(cl, cv2.MORPH_OPEN, kernel2)
             mb = cv2.medianBlur(op, 5)
 
-            C.mb = mb
-            info = C.center_opelation(mb, i)
+            mouse_info.mb = mb
+            info = mouse_info.center_opelation(mb, i)
 
             info_str = str(info)
-            ser.write(info_str.encode('utf-8'))
-            ser.write(b'\n')
+            select_port.write(info_str.encode('utf-8'))
+            select_port.write(b'\n')
 
             timestamp = str(datetime.now())[0:21].replace(' ', '')
             infos = info_str[0:6] + ',' + \
                 str(int((t1-t0)/10)) + ',' + timestamp
-            ser.reset_output_buffer()
+            select_port.reset_output_buffer()
             # allinfo = info_str + ',' + str(int((t1-t0)/10))  + ',' +timestamp
             print(infos)
             if save_csv:
@@ -257,11 +222,11 @@ def video_body(ser, C):
                         1.0, (255, 255, 255), thickness=2)
             try:
                 # put circle
-                cv2.circle(mb, (C.centerX[i], C.centerY[i]),
+                cv2.circle(mb, (mouse_info.centerX[i], mouse_info.centerY[i]),
                            10, (150, 150, 150),  thickness=4)
             except Exception:
                 # last point
-                cv2.circle(mb, (C.centerX[-1], C.centerY[-1]),
+                cv2.circle(mb, (mouse_info.centerX[-1], mouse_info.centerY[-1]),
                            10, (150, 150, 150), thickness=4)
 
             out_frame_color = cv2.cvtColor(cv2.hconcat(
@@ -292,12 +257,17 @@ def video_body(ser, C):
 
 if __name__ == '__main__':
     print(BANNER)
-    ser = select_port()
-    # show_connection(ser)
+    
+    s = select_port()
+    m = MouseInfo()
+    m.centerX = [0, 0]
+    m.centerY = [0, 0]
+    m.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    
+    c = DeviceInfo()
+    c.num = select_cam_device_num
 
-    # init center class
-    C = mouseinfo()
-    C.centerX = [0, 0]
-    C.centerY = [0, 0]
-    C.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    video_body(ser, C)
+    options = select_options() 
+
+    show_window('If you quit, type "q"', 'info')
+    video_body(s, m, c, options['save_video'], options['save_csv'])
