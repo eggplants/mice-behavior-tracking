@@ -115,6 +115,9 @@ jobs:
           tar -C tracking_GUI-linux -pczvf tracking_GUI-linux.tar.gz tracking_GUI
           zip --junk-paths tracking_GUI-windows ./tracking_GUI-windows/tracking_GUI.exe
 
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> "$GITHUB_ENV"
+
       - name: Append mac Binary
         uses: actions/upload-release-asset@v1
         env:
@@ -122,7 +125,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./tracking_GUI-macos.tar.gz
-          asset_name: tracking_GUI-macos_${{ github.ref }}.tar.gz
+          asset_name: tracking_GUI-macos_${{ env.RELEASE_VERSION }}.tar.gz
           asset_content_type: application/gzip
 
       - name: Append linux Binary
@@ -132,7 +135,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./tracking_GUI-linux.tar.gz
-          asset_name: tracking_GUI-linux_${{ github.ref }}.tar.gz
+          asset_name: tracking_GUI-linux_${{ env.RELEASE_VERSION }}.tar.gz
           asset_content_type: application/gzip
 
       - name: Append win Binary
@@ -142,5 +145,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./tracking_GUI-windows.zip
-          asset_name: tracking_GUI-windows_${{ github.ref }}.zip
+          asset_name: tracking_GUI-windows_${{ env.RELEASE_VERSION }}.zip
           asset_content_type: application/zip
