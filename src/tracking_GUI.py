@@ -1,5 +1,5 @@
-import time
 import getpass
+import time
 from datetime import datetime
 
 import cv2
@@ -10,16 +10,17 @@ from serial.tools import list_ports
 BANNER = '''\
            _                _                  _    _
  _ __ ___ (_) ___ ___      | |_ _ __ __ _  ___| | _(_)_ __   __ _
-| '_ ` _ \| |/ __/ _ \_____| __| '__/ _` |/ __| |/ / | '_ \ / _` |
+| '_ ` _ \\| |/ __/ _ \\_____| __| '__/ _` |/ __| |/ / | '_ \\ / _` |
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
-|_| |_| |_|_|\___\___|      \__|_|  \__,_|\___|_|\_\_|_| |_|\__, |
+|_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
 v0.7
 '''
 
+
 class DeviceInfo():
     def __init__(self):
-        self.num = 0
+        self.num: int = 0
 
 
 class TrackingError(Exception):
@@ -34,8 +35,7 @@ class MouseInfo():
         self.centlist = []
 
     def center_opelation(self, mb, i):
-        nlabels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-            mb)
+        _, _, stats, centroids = cv2.connectedComponentsWithStats(mb)
         try:
             cx = int(centroids[1+np.nanargmax(stats[1:, -1])][0])
             cy = int(centroids[1+np.nanargmax(stats[1:, -1])][1])
@@ -50,16 +50,6 @@ class MouseInfo():
         # cation cahnegd
         return 300*np.abs(
             (self.centlist[i] - np.mean(self.centlist))/np.std(self.centlist))
-
-
-def show_window(title: str, message: str,
-                button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
-    print('[{}]: {}'.format(title, message))
-    getpass.getpass('[{}]'.format(button))
-    # import easygui
-    # easygui.msgbox(title, message)
-    if exit_:
-        exit(1)
 
 
 def get_ans(question, selections=["y", "n"]):
@@ -90,8 +80,18 @@ def strlist_to_comma_str(lis):
     return ", ".join(map(str, lis))
 
 
-def show_connection(ser) => None:
-    for i in range(3):
+def show_window(title: str, message: str,
+                button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
+    print('[{}]: {}'.format(title, message))
+    getpass.getpass('[{}]'.format(button))
+    # import easygui
+    # easygui.msgbox(title, message)
+    if exit_:
+        exit(1)
+
+
+def show_connection(ser) -> None:
+    for _ in range(3):
         startshow = str(60000)
         ser.write(startshow.encode('utf-8'))
         ser.write(b'\n')
@@ -117,7 +117,7 @@ def select_port():
     devices = [info.device for info in ports]
     if len(devices) == 0:
         show_window(str(type(TrackingError)),
-                    "Error: serial device not found", exit_ = True)
+                    "Error: serial device not found", exit_=True)
         raise TrackingError('Error: serial device not found')
     elif len(devices) == 1:
         print('=> Only found: %s' % devices[0])
@@ -137,10 +137,11 @@ def select_port():
         ser.open()
         return ser
     except Exception as e:
-        show_window(str(type(e)), "Error: occurs when opening serial", exit_=True)
+        show_window(
+            str(type(e)), "Error: occurs when opening serial", exit_=True)
         raise TrackingError('Error: error occurs when opening serial')
 
-        
+
 def select_cam_device_num():
     print('[Camera Device]')
     print('Checking camera devices...')
@@ -226,7 +227,8 @@ def video_body(select_port, mouse_info, camera_info, save_video, save_csv):
                            10, (150, 150, 150),  thickness=4)
             except Exception:
                 # last point
-                cv2.circle(mb, (mouse_info.centerX[-1], mouse_info.centerY[-1]),
+                cv2.circle(mb,
+                           (mouse_info.centerX[-1], mouse_info.centerY[-1]),
                            10, (150, 150, 150), thickness=4)
 
             out_frame_color = cv2.cvtColor(cv2.hconcat(
@@ -257,17 +259,17 @@ def video_body(select_port, mouse_info, camera_info, save_video, save_csv):
 
 if __name__ == '__main__':
     print(BANNER)
-    
+
     s = select_port()
     m = MouseInfo()
     m.centerX = [0, 0]
     m.centerY = [0, 0]
     m.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    
+
     c = DeviceInfo()
-    c.num = select_cam_device_num
+    c.num = select_cam_device_num()
 
-    options = select_options() 
+    options = select_options()
 
-    show_window('If you quit, type "q"', 'info')
+    show_window('info', 'If you quit, type "q"')
     video_body(s, m, c, options['save_video'], options['save_csv'])
