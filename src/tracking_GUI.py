@@ -14,7 +14,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.7
+v0.8
 '''
 
 
@@ -52,13 +52,13 @@ class MouseInfo():
             (self.centlist[i] - np.mean(self.centlist))/np.std(self.centlist))
 
 
-def get_ans(question, selections=["y", "n"]):
+def get_ans(question, selections=['y', 'n']):
     reply = input(question)
     selections = list(map(str,  selections))
     if reply in selections:
         return reply
     else:
-        return get_ans("invalid answer. retry: ", selections)
+        return get_ans('invalid answer. retry: ', selections)
 
 
 def get_cams_list():
@@ -77,12 +77,12 @@ def get_cams_list():
 
 
 def strlist_to_comma_str(lis):
-    return ", ".join(map(str, lis))
+    return ', '.join(map(str, lis))
 
 
 def show_window(title: str, message: str,
                 button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
-    print('[{}]: {}'.format(title, message))
+    print('[{}]\n{}'.format(title, message))
     getpass.getpass('[{}]'.format(button))
     # import easygui
     # easygui.msgbox(title, message)
@@ -117,7 +117,7 @@ def select_port():
     devices = [info.device for info in ports]
     if len(devices) == 0:
         show_window(str(type(TrackingError)),
-                    "Error: serial device not found", exit_=True)
+                    'Error: serial device not found', exit_=True)
         raise TrackingError('Error: serial device not found')
     elif len(devices) == 1:
         print('=> Only found: %s' % devices[0])
@@ -138,7 +138,7 @@ def select_port():
         return ser
     except Exception as e:
         show_window(
-            str(type(e)), "Error: occurs when opening serial", exit_=True)
+            str(type(e)), 'Error: occurs when opening serial', exit_=True)
         raise TrackingError('Error: error occurs when opening serial')
 
 
@@ -169,95 +169,119 @@ def select_options():
     return {'save_video': save_video, 'save_csv': save_csv}
 
 
-def video_body(select_port, mouse_info, camera_info, save_video, save_csv):
-    cap = cv2.VideoCapture(camera_info.num)
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    nowtime = str(datetime.now())
-    filename = nowtime.replace(' ', '').replace(
-        '.', '-').replace(':', '-') + str('.avi')
-    csvfilename = nowtime.replace(' ', '').replace(
-        '.', '-').replace(':', '-') + str('.csv')
-    out = ''
-    if save_video:
-        out = cv2.VideoWriter(filename, fourcc, 10.0, (1280, 480))
+def draw_circle(median_blur, mouse_info, idx):
+    try:
+        # put circle
+        cv2.circle(median_blur,
+                   (mouse_info.centerX[idx], mouse_info.centerY[idx]),
+                   10, (150, 150, 150),  thickness=4)
+    except Exception:
+        # last point
+        cv2.circle(median_blur,
+                   (mouse_info.centerX[-1], mouse_info.centerY[-1]),
+                   10, (150, 150, 150), thickness=4)
 
-    kernel1 = np.ones((5, 5), np.uint8)
-    kernel2 = np.ones((10, 10), np.uint8)
-    if save_csv:
-        csvfile = open(csvfilename, 'w')
-    else:
-        csvfile = None
 
-    t0 = time.perf_counter()
-    i = 0
-    while True:
-        ret, frame = cap.read()
-        if ret:
-            i += 1
-            t1 = time.perf_counter()
-            # image processing
-            two = np.where(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                           < 5, 254, 0).astype('uint8')
-            cl = cv2.morphologyEx(two, cv2.MORPH_CLOSE, kernel1)
-            op = cv2.morphologyEx(cl, cv2.MORPH_OPEN, kernel2)
-            mb = cv2.medianBlur(op, 5)
+def release(cap_, csv_, avi_) -> None:
+    cap_.release()
+    if csv_ is not None:
+        csv_.close()
+    if avi_ is not None:
+        avi_.release()
 
-            mouse_info.mb = mb
-            info = mouse_info.center_opelation(mb, i)
-
-            info_str = str(info)
-            select_port.write(info_str.encode('utf-8'))
-            select_port.write(b'\n')
-
-            timestamp = str(datetime.now())[0:21].replace(' ', '')
-            infos = info_str[0:6] + ',' + \
-                str(int((t1-t0)/10)) + ',' + timestamp
-            select_port.reset_output_buffer()
-            # allinfo = info_str + ',' + str(int((t1-t0)/10))  + ',' +timestamp
-            print(infos)
-            if save_csv:
-                csvfile.write(infos)
-                csvfile.write('\n')
-
-            cv2.putText(frame, infos, (40, 40), cv2.FONT_HERSHEY_SIMPLEX,
-                        1.0, (255, 255, 255), thickness=2)
-            try:
-                # put circle
-                cv2.circle(mb, (mouse_info.centerX[i], mouse_info.centerY[i]),
-                           10, (150, 150, 150),  thickness=4)
-            except Exception:
-                # last point
-                cv2.circle(mb,
-                           (mouse_info.centerX[-1], mouse_info.centerY[-1]),
-                           10, (150, 150, 150), thickness=4)
-
-            out_frame_color = cv2.cvtColor(cv2.hconcat(
-                [mb, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)]),
-                cv2.COLOR_GRAY2BGR)
-            if save_video and out != '':
-                out.write(out_frame_color)
-            cv2.imshow('frames', out_frame_color)
-
-            t2 = time.perf_counter()
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            elif t2 - t1 > 25200:
-                break
-        else:
-            show_window(str(type(TrackingError)),
-                        "Error: error occurs when get frame from camera")
-            raise TrackingError(
-                'Error: error occurs when get frame from camera')
-
-    csvfile.close()
-    cap.release()
-    if out != '':
-        out.release()
     cv2.destroyAllWindows()
 
 
-if __name__ == '__main__':
+def video_body(select_port, mouse_info,
+               camera_info, save_video, save_csv) -> None:
+    cap = cv2.VideoCapture(camera_info.num)
+    avifile = None
+    csvfile = None
+    nowtime = str(datetime.now())
+
+    if save_video:
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        filename = nowtime.replace(' ', '').replace(
+            '.', '-').replace(':', '-') + str('.avi')
+        avifile = cv2.VideoWriter(filename, fourcc, 10.0, (1280, 480))
+
+    if save_csv:
+        csvfilename = nowtime.replace(' ', '').replace(
+            '.', '-').replace(':', '-') + str('.csv')
+        csvfile = open(csvfilename, 'w')
+
+    try:
+        _video_body(cap, select_port, mouse_info, avifile, csvfile)
+    except KeyboardInterrupt:
+        print('SIGINT')
+        release(cap, avifile, csvfile)
+    except Exception as e:
+        release(cap, avifile, csvfile)
+        show_window(
+            str(type(e)), 'Error: occurs when processing', exit_=True)
+
+
+def _video_body(cap, select_port, mouse_info, avifile, csvfile) -> None:
+    # cap = cv2.VideoCapture(camera_info.num)
+
+    kernel1 = np.ones((5, 5), np.uint8)
+    kernel2 = np.ones((10, 10), np.uint8)
+
+    t0 = time.perf_counter()
+    i = 0
+    ret, frame = cap.read()
+    while ret:
+        i += 1
+        t1 = time.perf_counter()
+
+        # image processing
+        two = np.where(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                       < 5, 254, 0).astype('uint8')
+        cl = cv2.morphologyEx(two, cv2.MORPH_CLOSE, kernel1)
+        op = cv2.morphologyEx(cl, cv2.MORPH_OPEN, kernel2)
+        mb = cv2.medianBlur(op, 5)
+
+        mouse_info.mb = mb
+        info = mouse_info.center_opelation(mb, i)
+
+        info_str = str(info)
+        select_port.write(info_str.encode('utf-8'))
+        select_port.write(b'\n')
+
+        timestamp = str(datetime.now())[0:21].replace(' ', '')
+        infos = info_str[0:6] + ',' + \
+            str(int((t1-t0)/10)) + ',' + timestamp
+        select_port.reset_output_buffer()
+        print(infos)
+
+        if csvfile is not None:
+            csvfile.write(infos)
+            csvfile.write('\n')
+
+        cv2.putText(frame, infos, (40, 40), cv2.FONT_HERSHEY_SIMPLEX,
+                    1.0, (255, 255, 255), thickness=2)
+        draw_circle(mb, mouse_info, i)
+
+        out_frame_color = cv2.cvtColor(cv2.hconcat(
+            [mb, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)]),
+            cv2.COLOR_GRAY2BGR)
+
+        if avifile is not None:
+            avifile.write(out_frame_color)
+
+        cv2.imshow('frames', out_frame_color)
+
+        t2 = time.perf_counter()
+
+        if cv2.waitKey(1) & 0xFF == ord('q') or t2 - t1 > 25200:
+            break
+
+        ret, frame = cap.read()
+
+    release(cap, avifile, csvfile)
+
+
+def main() -> None:
     print(BANNER)
 
     s = select_port()
@@ -271,5 +295,14 @@ if __name__ == '__main__':
 
     options = select_options()
 
-    show_window('info', 'If you quit, type "q"')
+    show_window('info', 'If you quit, type "q" on cam window'
+                        '\nor "Ctrl+C" on terminal.')
     video_body(s, m, c, options['save_video'], options['save_csv'])
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('SIGINT')
+        exit(0)
