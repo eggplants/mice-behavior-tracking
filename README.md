@@ -1,4 +1,4 @@
-# mouse behavior tracking
+# mice behavior tracking
 
 [![Build](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml/badge.svg)](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml)
 
