@@ -15,7 +15,7 @@ pyinstaller tracking.py --onefile -i icon.ico
 ## Author
 
 - original code written by xxx
-- modified by[natsukacha](https://github.com/natsukacha)
+- modified by [natsukacha](https://github.com/natsukacha)
 - modified by [eggplants](https://github.com/eggplants)
 
 ## Icon
