@@ -197,7 +197,7 @@ def select_options() -> Dict[str, bool]:
     else:
         save_csv = False
 
-    if get_ans('Colorize wiveo? (y/n): ') == 'y':
+    if get_ans('Colorize video? (y/n): ') == 'y':
         color_video = True
     else:
         color_video = False
