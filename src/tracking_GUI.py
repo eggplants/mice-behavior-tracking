@@ -38,12 +38,12 @@ class TrackingError(Exception):
 
 class MouseInfo():
     def init(self):
-        self.mb = []
+        self.med_blur = []
         self.centerX = []
         self.centerY = []
         self.centlist = []
 
-    def center_operation(self, mb, i):
+    def center_operation(self, med_blur: cv2.medianBlur, idx: int):
         """Extract controids of connected components
 
         search conn-cmpt and index them
@@ -53,7 +53,7 @@ class MouseInfo():
         stats: list of conn-cmpts' box info
         centroids: list of center of gravity
         """
-        _, _, stats, centroids = cv2.connectedComponentsWithStats(mb)
+        _, _, stats, centroids = cv2.connectedComponentsWithStats(med_blur)
         try:
             cx = int(centroids[1+np.nanargmax(stats[1:, -1])][0])
             cy = int(centroids[1+np.nanargmax(stats[1:, -1])][1])
@@ -67,11 +67,11 @@ class MouseInfo():
 
         # returns: 300 * z-value
         # zvalue is alse called standard score
-        z = (self.centlist[i] - np.mean(self.centlist))/np.std(self.centlist)
+        z = (self.centlist[idx] - np.mean(self.centlist))/np.std(self.centlist)
         return 300 * np.abs(z)
 
 
-def get_ans(question, selections=['y', 'n']):
+def get_ans(question: str, selections: List[str] = ['y', 'n']):
     """Question and receive a selection"""
     reply = input(question)
     selections = list(map(str,  selections))
@@ -269,10 +269,10 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
     kernel2 = np.ones((10, 10), np.uint8)  # kernel (size=10x10)
 
     t0 = time.perf_counter()
-    i = 0
+    idx = 0
     ret, frame = cap.read()
     while ret:
-        i += 1
+        idx += 1
         t1 = time.perf_counter()
 
         # image processing:
@@ -283,10 +283,10 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         # morphology conversion($.closing.opening)
         cl = cv2.morphologyEx(two, cv2.MORPH_CLOSE, kernel1)
         op = cv2.morphologyEx(cl, cv2.MORPH_OPEN, kernel2)
-        mb = cv2.medianBlur(op, 5)
+        med_blur = cv2.medianBlur(op, 5)
 
-        mouse_info.mb = mb
-        info = mouse_info.center_operation(mb, i)
+        mouse_info.med_blur = med_blur
+        info = mouse_info.center_operation(med_blur, idx)
 
         info_str = str(info)
         select_port.write(info_str.encode('utf-8'))
@@ -306,19 +306,19 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         # pastes timestamp on upper of frame
         cv2.putText(frame, infos, (40, 40), cv2.FONT_HERSHEY_SIMPLEX,
                     1.0, (255, 255, 255), thickness=2)
-        draw_circle(mb, mouse_info, i)
+        draw_circle(med_blur, mouse_info, idx)
 
         if csvfile is not None:
             csvfile.write(infos)
             csvfile.write('\n')
 
         if frame_color:
-            mb = cv2.cvtColor(mb, cv2.COLOR_GRAY2BGR)
-            side_by_side = np.hstack([mb, frame])
+            med_blur = cv2.cvtColor(med_blur, cv2.COLOR_GRAY2BGR)
+            side_by_side = np.hstack([med_blur, frame])
         else:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             side_by_side = cv2.cvtColor(
-                cv2.hconcat([mb, frame]), cv2.COLOR_GRAY2BGR)
+                cv2.hconcat([med_blur, frame]), cv2.COLOR_GRAY2BGR)
         if avifile is not None:
             avifile.write(side_by_side)
 
