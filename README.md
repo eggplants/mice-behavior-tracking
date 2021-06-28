@@ -2,7 +2,13 @@
 
 [![Build](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml/badge.svg)](https://github.com/eggplants/mice-behavior-tracking/actions/workflows/build.yml)
 
-## Binaries (win, mac, linux)
+- A system that captures the movement of a mice
+- Real-time calculation from camera
+- output of the amount of movement of the center of gravity
+  - CSV(`displacement_of_mice,int(elapsed_sec/10),timestamp`)
+  - AVI(color or monochrome)
+
+## Binaries (Windows, Mac, Linux)
 
 See: [Releases](https://github.com/eggplants/mice-behavior-tracking/releases)
 
@@ -14,7 +20,7 @@ pyinstaller tracking.py --onefile -i icon.ico
 
 ## Author
 
-- original code written by xxx
+- original code written by shikama
 - modified by [natsukacha](https://github.com/natsukacha)
 - modified by [eggplants](https://github.com/eggplants)
 
