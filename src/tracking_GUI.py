@@ -1,13 +1,16 @@
 import getpass
+import os
+import sys
 import time
 import warnings
 from datetime import datetime
-from typing import IO, Any, Dict, List, NewType, Optional, Union
+from typing import IO, Any, List, NewType, Optional, Tuple, Union
 
 import cv2
 import numpy as np
 import serial
 from serial.tools import list_ports
+from typing_extensions import TypedDict
 
 warnings.filterwarnings("ignore")
 Serial = NewType(
@@ -23,7 +26,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.10
+v0.11
 '''
 
 
@@ -38,30 +41,42 @@ class TrackingError(Exception):
 
 class MouseInfo():
     def init(self):
-        self.med_blur = []
+        self.binarized_frame = np.ndarray((2,))
         self.centerX = []
         self.centerY = []
         self.centlist = []
 
-    def center_operation(self, med_blur: cv2.medianBlur, idx: int):
-        """Extract controids of connected components
-
-        search conn-cmpt and index them
-        returns: nlabels, labels, stats, centroids
-        nlabels: max index of conn-cmpt
-        labels: list of labeled pixels
-        stats: list of conn-cmpts' box info
-        centroids: list of center of gravity
+    def center_operation(self, binarized_frame: np.ndarray, idx: int) -> float:
+        """Calculate the amount of movement of the center of gravity
+        Measure the movement of the center of gravity from the previous frame.
         """
-        _, _, stats, centroids = cv2.connectedComponentsWithStats(med_blur)
+        _, _, stats, centroids = cv2.connectedComponentsWithStats(
+            binarized_frame, 4)
+        stats = stats[1:]  # Remove information from the entire image(idx=0)
+        # Sort by size
+        # Exclusion of obviously different shapes by mice
+        # a_,b_=sorted([w,h]);OK if a_/b_>=0.1
+        for _ in range(len(stats)):
+            a_, b_ = np.sort(stats[_, 2:4])
+            if a_/b_ < 0.1:
+                stats[_, -1] = 0
         try:
-            cx = int(centroids[1+np.nanargmax(stats[1:, -1])][0])
-            cy = int(centroids[1+np.nanargmax(stats[1:, -1])][1])
+            # Select the one with the largest size
+            max_idx = np.argmax(stats[:, -1]) + 1
+            # substitute useless components from frame (too slow):
+            # for _ in range(1, nlabels):
+            #     if _ != max_idx:
+            #         binarized_frame[labels == _] = 0
+            cx = int(centroids[max_idx][0])
+            cy = int(centroids[max_idx][1])
+            prev_cx = self.centerX[-1]
+            prev_cy = self.centerY[-1]
 
             self.centerX.append(cx)
             self.centerY.append(cy)
-            self.centlist.append(
-                (self.centerX[-2] - cx)**2 + (self.centerY[-2] - cy)**2)
+            # measure distance between prev and current centroids
+            self.centlist.append((prev_cx - cx)**2 + (prev_cy - cy)**2)
+
         except ValueError:
             self.centlist.append(0)
 
@@ -71,8 +86,28 @@ class MouseInfo():
         return 300 * np.abs(z)
 
 
-def get_ans(question: str, selections: List[str] = ['y', 'n']):
-    """Question and receive a selection"""
+class Options(TypedDict):
+    save_video: bool
+    save_csv: bool
+    color_video: bool
+
+
+def select_options() -> Options:
+    """Select options"""
+    print('[Options]')
+    # set if save:
+    save_video = get_ans('Save video(.avi) ? (y/n): ') == 'y'
+    save_csv = get_ans('Save result(.csv)? (y/n): ') == 'y'
+    color_video = get_ans('Colorize video? (y/n): ') == 'y'
+
+    return {'save_video': save_video,
+            'save_csv': save_csv,
+            'color_video': color_video}
+
+
+def get_ans(question: str, selections: Union[List[str], List[int]] = ['y', 'n']):
+    """Question and receive a selection
+    """
     reply = input(question)
     selections = list(map(str,  selections))
     if reply in selections:
@@ -82,7 +117,8 @@ def get_ans(question: str, selections: List[str] = ['y', 'n']):
 
 
 def get_cams_list() -> List[int]:
-    """Get a list of camera devices"""
+    """Get a list of camera devices
+    """
     idx = 0
     arr = []
     while True:
@@ -106,25 +142,8 @@ def show_window(title: str, message: str,
     """Show infomation on terminal"""
     print('[{}]\n{}'.format(title, message))
     getpass.getpass('[{}]'.format(button))
-    # import easygui
-    # easygui.msgbox(title, message)
     if exit_:
         exit(1)
-
-
-# def show_connection(ser) -> None:
-#     for _ in range(3):
-#         startshow = str(60000)
-#         ser.write(startshow.encode('utf-8'))
-#         ser.write(b'\n')
-#         ser.reset_output_buffer()
-#         time.sleep(0.5)
-
-#         startshow_2 = str(0)
-#         ser.write(startshow_2.encode('utf-8'))
-#         ser.write(b'\n')
-#         ser.reset_output_buffer()
-#         time.sleep(0.5)
 
 
 def select_port() -> Serial:
@@ -137,7 +156,7 @@ def select_port() -> Serial:
         ser.baudrate, ser.timeout))
 
     ports = list_ports.comports()  # get port data
-    devices = [info.device for info in ports]
+    devices: List[str] = [info.device for info in ports]
     if len(devices) == 0:
         show_window(str(type(TrackingError)),
                     'Error: serial device not found', exit_=True)
@@ -183,46 +202,19 @@ def select_cam_device_num() -> int:
     return device_num
 
 
-def select_options() -> Dict[str, bool]:
-    """Select options"""
-    print('[Options]')
-    # set if save:
-    if get_ans('Save video(.avi) ? (y/n): ') == 'y':
-        save_video = True
-    else:
-        save_video = False
-
-    if get_ans('Save result(.csv)? (y/n): ') == 'y':
-        save_csv = True
-    else:
-        save_csv = False
-
-    if get_ans('Colorize video? (y/n): ') == 'y':
-        color_video = True
-    else:
-        color_video = False
-    return {'save_video': save_video,
-            'save_csv': save_csv,
-            'color_video': color_video}
-
-
-def draw_circle(median_blur: cv2.medianBlur, mouse_info: MouseInfo, idx: int):
+def draw_circle(binarized_frame: np.ndarray, mouse_info: MouseInfo) -> None:
     """Draw a circle on a centroid of blured frame"""
-    try:
-        # put circle
-        cv2.circle(median_blur,
-                   (mouse_info.centerX[idx], mouse_info.centerY[idx]),
-                   10, (150, 150, 150),  thickness=4)
-    except Exception:
-        # last point
-        cv2.circle(median_blur,
-                   (mouse_info.centerX[-1], mouse_info.centerY[-1]),
-                   10, (150, 150, 150), thickness=4)
+    binarized_frame = cv2.circle(binarized_frame,
+                                 (mouse_info.centerX[-1],
+                                  mouse_info.centerY[-1]),
+                                 10, (150, 150, 150),  thickness=4)
 
 
-def release(cap_: cv2.VideoCapture, csv_: IO, avi_: cv2.VideoWriter) -> None:
+def release(cap_: Optional[cv2.VideoCapture],
+            csv_: Optional[IO], avi_: Optional[cv2.VideoWriter]) -> None:
     """GC"""
-    cap_.release()
+    if cap_ is not None:
+        cap_.release()
     if csv_ is not None:
         csv_.close()
     if avi_ is not None:
@@ -235,7 +227,9 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
                camera_info: DeviceInfo, save_video: bool,
                save_csv: bool, frame_color: bool) -> None:
     """Process and output a video and logs"""
-    cap = cv2.VideoCapture(camera_info.num)
+    cap = cv2.VideoCapture(sys.argv[1]
+                           if len(sys.argv) == 2 and os.path.isfile(sys.argv[1])
+                           else camera_info.num)
     avifile = None
     csvfile = None
     nowtime = datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
@@ -253,20 +247,27 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
     except KeyboardInterrupt:
         print('SIGINT')
         release(cap, avifile, csvfile)
-    except Exception as e:
-        err, msg = type(e), str(e)
-        release(cap, avifile, csvfile)
-        show_window(
-            '{}:{}'.format(err, msg), 'Error: occurs when processing', exit_=True)
+
+
+def binarize(frame: np.ndarray,
+             range_low: Tuple[int, int, int] = (0, 0, 0, ),
+             range_up: Tuple[int, int, int] = (45, 255, 23,)) -> np.ndarray:
+    """image processing (new):
+    remove green cable
+    """
+    def make_hsv_range(low: Tuple[int, int, int], up: Tuple[int, int, int]
+                       ) -> Tuple[np.ndarray, np.ndarray]:
+        return np.array(low), np.array(up)
+    filter_ = make_hsv_range(range_low, range_up)
+    mask = cv2.inRange(frame, *filter_)
+
+    return mask
 
 
 def _video_body(cap: cv2.VideoCapture, select_port: Serial,
                 mouse_info: MouseInfo, avifile: Optional[cv2.VideoWriter],
                 csvfile: Optional[IO], frame_color: bool = False) -> None:
     """Helper"""
-    # cap = cv2.VideoCapture(camera_info.num)
-    kernel1 = np.ones((5, 5), np.uint8)  # kernel (size=5x5)
-    kernel2 = np.ones((10, 10), np.uint8)  # kernel (size=10x10)
 
     t0 = time.perf_counter()
     idx = 0
@@ -274,19 +275,10 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
     while ret:
         idx += 1
         t1 = time.perf_counter()
+        binarized_frame = binarize(frame)
 
-        # image processing:
-        # extract black(glaypix<5) segment from binarized image
-        # black->white, others->black
-        two = np.where(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                       < 5, 254, 0).astype('uint8')
-        # morphology conversion($.closing.opening)
-        cl = cv2.morphologyEx(two, cv2.MORPH_CLOSE, kernel1)
-        op = cv2.morphologyEx(cl, cv2.MORPH_OPEN, kernel2)
-        med_blur = cv2.medianBlur(op, 5)
-
-        mouse_info.med_blur = med_blur
-        info = mouse_info.center_operation(med_blur, idx)
+        mouse_info.binarized_frame = binarized_frame
+        info = mouse_info.center_operation(binarized_frame, idx)
 
         info_str = str(info)
         select_port.write(info_str.encode('utf-8'))
@@ -306,19 +298,18 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         # pastes timestamp on upper of frame
         cv2.putText(frame, infos, (40, 40), cv2.FONT_HERSHEY_SIMPLEX,
                     1.0, (255, 255, 255), thickness=2)
-        draw_circle(med_blur, mouse_info, idx)
+        draw_circle(binarized_frame, mouse_info)
 
         if csvfile is not None:
             csvfile.write(infos)
             csvfile.write('\n')
 
         if frame_color:
-            med_blur = cv2.cvtColor(med_blur, cv2.COLOR_GRAY2BGR)
-            side_by_side = np.hstack([med_blur, frame])
+            side_by_side = np.hstack(
+                [cv2.cvtColor(binarized_frame, cv2.COLOR_GRAY2BGR), frame])
         else:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            side_by_side = cv2.cvtColor(
-                cv2.hconcat([med_blur, frame]), cv2.COLOR_GRAY2BGR)
+            mono = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            side_by_side = np.hstack([binarized_frame, mono])
         if avifile is not None:
             avifile.write(side_by_side)
 
