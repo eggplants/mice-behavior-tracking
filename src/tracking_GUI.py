@@ -26,7 +26,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.11
+v0.12
 '''
 
 
@@ -58,17 +58,21 @@ class MouseInfo():
         # a_,b_=sorted([w,h]);OK if a_/b_>=0.1
         for _ in range(len(stats)):
             a_, b_ = np.sort(stats[_, 2:4])
-            if a_/b_ < 0.1:
+            if a_/b_ < 0.3:
                 stats[_, -1] = 0
         try:
             # Select the one with the largest size
-            max_idx = np.argmax(stats[:, -1]) + 1
-            # substitute useless components from frame (too slow):
-            # for _ in range(1, nlabels):
-            #     if _ != max_idx:
-            #         binarized_frame[labels == _] = 0
-            cx = int(centroids[max_idx][0])
-            cy = int(centroids[max_idx][1])
+            if len(stats) > 0:
+                max_idx = np.argmax(stats[:, -1]) + 1
+                # substitute useless components from frame (too slow):
+                # for _ in range(1, nlabels):
+                #     if _ != max_idx:
+                #         binarized_frame[labels == _] = 0
+                cx = int(centroids[max_idx][0])
+                cy = int(centroids[max_idx][1])
+            else:
+                cx, cy = self.centerX[-1], self.centerY[-1]
+
             prev_cx = self.centerX[-1]
             prev_cy = self.centerY[-1]
 
@@ -259,9 +263,17 @@ def binarize(frame: np.ndarray,
                        ) -> Tuple[np.ndarray, np.ndarray]:
         return np.array(low), np.array(up)
     filter_ = make_hsv_range(range_low, range_up)
+    # filter and remove color except a color of black mouse
     mask = cv2.inRange(frame, *filter_)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((20, 20), np.uint8))
+    mask = cv2.dilate(mask, np.ones((30, 30), np.uint8))
 
     return mask
+
+
+def resize_frame(frame: np.ndarray, ratio: float = 0.5) -> np.ndarray:
+    h, w = frame.shape[0:2]
+    return cv2.resize(frame, (int(w*ratio), int(h*ratio)))
 
 
 def _video_body(cap: cv2.VideoCapture, select_port: Serial,
@@ -313,7 +325,7 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         if avifile is not None:
             avifile.write(side_by_side)
 
-        cv2.imshow('frames', side_by_side)
+        cv2.imshow('frames', resize_frame(side_by_side))
 
         t2 = time.perf_counter()
         if cv2.waitKey(1) & 0xFF == ord('q') or t2 - t1 > 25200:
@@ -335,7 +347,8 @@ def main() -> None:
     m.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     c = DeviceInfo()
-    c.num = select_cam_device_num()
+    if len(sys.argv) < 2:
+        c.num = select_cam_device_num()
 
     options = select_options()
 
