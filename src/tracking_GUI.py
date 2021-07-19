@@ -266,7 +266,7 @@ def binarize(frame: np.ndarray,
     # filter and remove color except a color of black mouse
     mask = cv2.inRange(frame, *filter_)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((20, 20), np.uint8))
-    mask = cv2.dilate(mask, np.ones((30, 30), np.uint8))
+    mask = cv2.dilate(mask, np.ones((50, 50), np.uint8))
 
     return mask
 
