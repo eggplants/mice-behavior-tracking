@@ -15,7 +15,7 @@ See: [Releases](https://github.com/eggplants/mice-behavior-tracking/releases)
 ## Local build
 
 ```bash
-pyinstaller tracking.py --onefile -i icon.ico
+pyinstaller -F src/tracking_GUI.py -i img/icon.ico
 ```
 
 ## Author
@@ -27,6 +27,8 @@ pyinstaller tracking.py --onefile -i icon.ico
 ## Icon
 
 - <https://icon-icons.com/icon/testing-mouse-sciencie-scientific/53002>
+
+<img src="https://cdn.icon-icons.com/icons2/539/PNG/512/testing-mouse_icon-icons.com_53002.png" width="500x800" alt="icon" />
 
 ## Screenshots
 
