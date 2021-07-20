@@ -27,3 +27,8 @@ pyinstaller tracking.py --onefile -i icon.ico
 ## Icon
 
 - <https://icon-icons.com/icon/testing-mouse-sciencie-scientific/53002>
+
+## Screenshots
+
+<img src="./img/01.png" width="500x800" alt="01" />
+<img src="./img/02.png" width="500x800" alt="02" />
