@@ -1,3 +1,3 @@
-opencv-python
-pyserial
-PyInstaller
+opencv-python>=4.5.3.56
+pyserial>=3.5
+pyInstaller>=4.4

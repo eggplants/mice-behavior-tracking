@@ -4,13 +4,12 @@ import sys
 import time
 import warnings
 from datetime import datetime
-from typing import IO, Any, List, NewType, Optional, Tuple, Union
+from typing import IO, Any, List, NewType, Optional, Tuple, TypedDict, Union
 
 import cv2
 import numpy as np
 import serial
 from serial.tools import list_ports
-from typing_extensions import TypedDict
 
 warnings.filterwarnings("ignore")
 Serial = NewType(
@@ -26,7 +25,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.12
+v0.13
 '''
 
 

@@ -7,6 +7,7 @@
 - output of the amount of movement of the center of gravity
   - CSV(`displacement_of_mice,int(elapsed_sec/10),timestamp`)
   - AVI(color or monochrome)
+- Available on Python 3.9 or more
 
 ## Binaries (Windows, Mac, Linux)
 
@@ -15,6 +16,9 @@ See: [Releases](https://github.com/eggplants/mice-behavior-tracking/releases)
 ## Local build
 
 ```bash
+# On Windows
+pyinstaller -F src/tracking_GUI.py -i img/icon.ico --version-file file_version_info.txt
+# On Linux and Mac
 pyinstaller -F src/tracking_GUI.py -i img/icon.ico
 ```
 
