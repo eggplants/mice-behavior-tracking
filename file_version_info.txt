@@ -35,7 +35,7 @@ VSVersionInfo(
         StringStruct(u'InternalName', u'mice-behavior-tracking'),
         StringStruct(u'OriginalFilename', u'tracking_GUI.exe'),
         StringStruct(u'FileVersion', u'0.13'),
-        StringStruct(u'FileDescription', u'A system that captures the movement of a mice'),
+        StringStruct(u'FileDescription', u'Capture the movement of a mice'),
         StringStruct(u'LegalCopyright', u'Copyright © 2020-2021 IIIS Authors')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1252])])
