@@ -25,7 +25,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.13
+v0.14
 '''
 
 
@@ -213,8 +213,8 @@ def draw_circle(binarized_frame: np.ndarray, mouse_info: MouseInfo) -> None:
                                  10, (150, 150, 150),  thickness=4)
 
 
-def release(cap_: Optional[cv2.VideoCapture],
-            csv_: Optional[IO], avi_: Optional[cv2.VideoWriter]) -> None:
+def release(cap_: Optional[cv2.VideoCapture] = None,
+            csv_: Optional[IO] = None, avi_: Optional[cv2.VideoWriter] = None) -> None:
     """GC"""
     if cap_ is not None:
         cap_.release()
@@ -238,8 +238,12 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
     nowtime = datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
     if save_video:
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))*2
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = int(cap.get(cv2.CAP_PROP_FPS))
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        avifile = cv2.VideoWriter(nowtime + '.avi', fourcc, 10.0, (1280, 480))
+        avifile = cv2.VideoWriter(
+            nowtime + '.avi', fourcc, fps, (width, height))
 
     if save_csv:
         csvfile = open(nowtime + '.csv', 'w')
@@ -249,7 +253,7 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
                     avifile, csvfile, frame_color)
     except KeyboardInterrupt:
         print('SIGINT')
-        release(cap, avifile, csvfile)
+        release(cap, csvfile, avifile)
 
 
 def binarize(frame: np.ndarray,
@@ -324,6 +328,10 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         if avifile is not None:
             avifile.write(side_by_side)
 
+        if os.environ.get('TEST') == '1':
+            ret, frame = cap.read()
+            continue
+
         cv2.imshow('frames', resize_frame(side_by_side))
 
         t2 = time.perf_counter()
@@ -332,7 +340,7 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
 
         ret, frame = cap.read()
 
-    release(cap, avifile, csvfile)
+    release(cap, csvfile, avifile)
 
 
 def main() -> None:
