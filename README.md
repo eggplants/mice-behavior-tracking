@@ -4,10 +4,11 @@
 
 - A system that captures the movement of a mice
 - Real-time calculation from camera
-- output of the amount of movement of the center of gravity
+- Output of the amount of movement of the center of gravity
   - CSV(`displacement_of_mice,int(elapsed_sec/10),timestamp`)
   - AVI(color or monochrome)
 - Available on Python 3.9 or more
+- (Based on not machine learning but image processing)
 
 ## Binaries (Windows, Mac, Linux)
 
@@ -22,6 +23,16 @@ pyinstaller -F src/tracking_GUI.py -i img/icon.ico --version-file file_version_i
 pyinstaller -F src/tracking_GUI.py -i img/icon.ico
 ```
 
+## Development
+
+- Test run (on Powershell)
+
+```powershell
+python src/tracking_GUI.py <video path>
+# or no window...
+$env:TEST=0;python src/tracking_GUI.py <video path>
+```
+
 ## Author
 
 - original code written by shikama
@@ -32,9 +43,9 @@ pyinstaller -F src/tracking_GUI.py -i img/icon.ico
 
 - <https://icon-icons.com/icon/testing-mouse-sciencie-scientific/53002>
 
-<img src="https://cdn.icon-icons.com/icons2/539/PNG/512/testing-mouse_icon-icons.com_53002.png" width="500x800" alt="icon" />
+![icon](img/icon.png)
 
 ## Screenshots
 
-<img src="./img/01.png" width="500x800" alt="01" />
-<img src="./img/02.png" width="500x800" alt="02" />
+![sc1](img/01.png)
+![sc2](img/02.png)

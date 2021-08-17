@@ -67,6 +67,8 @@ class MouseInfo():
                 # for _ in range(1, nlabels):
                 #     if _ != max_idx:
                 #         binarized_frame[labels == _] = 0
+                # cx = int(centroids[max_idx][0])
+                # cy = int(centroids[max_idx][1])
                 cx = int(centroids[max_idx][0])
                 cy = int(centroids[max_idx][1])
             else:
@@ -85,8 +87,10 @@ class MouseInfo():
 
         # returns: 300 * z-value
         # zvalue is alse called standard score
-        z = (self.centlist[idx] - np.mean(self.centlist))/np.std(self.centlist)
-        return 300 * np.abs(z)
+        # z = (self.centlist[idx] - np.mean(self.centlist))/np.std(self.centlist)
+        # return 300 * np.abs(z)
+
+        return self.centlist[-1]
 
 
 class Options(TypedDict):
@@ -238,12 +242,16 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
     nowtime = datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')
 
     if save_video:
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))*2
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)*2
+        height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        window_size = (int(width), int(height))
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # note:
+        # fps -> int | float
+        # window_size -> tuple[int, int]
         avifile = cv2.VideoWriter(
-            nowtime + '.avi', fourcc, fps, (width, height))
+            nowtime + '.avi', fourcc, fps, window_size)
 
     if save_csv:
         csvfile = open(nowtime + '.csv', 'w')
