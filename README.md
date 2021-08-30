@@ -9,6 +9,7 @@
   - AVI(color or monochrome)
 - Available on Python 3.9 or more
 - (Based on not machine learning but image processing)
+- *Note: Currently only works with black rats*
 
 ## Binaries (Windows, Mac, Linux)
 
