@@ -25,7 +25,7 @@ BANNER = '''\
 | | | | | | | (_|  __/_____| |_| | | (_| | (__|   <| | | | | (_| |
 |_| |_| |_|_|\\___\\___|      \\__|_|  \\__,_|\\___|_|\\_\\_|_| |_|\\__, |
                                                             |___/
-v0.14
+v0.15
 '''
 
 
@@ -45,7 +45,7 @@ class MouseInfo():
         self.centerY = []
         self.centlist = []
 
-    def center_operation(self, binarized_frame: np.ndarray, idx: int) -> float:
+    def center_operation(self, binarized_frame: np.ndarray) -> float:
         """Calculate the amount of movement of the center of gravity
         Measure the movement of the center of gravity from the previous frame.
         """
@@ -71,6 +71,7 @@ class MouseInfo():
                 # cy = int(centroids[max_idx][1])
                 cx = int(centroids[max_idx][0])
                 cy = int(centroids[max_idx][1])
+            # use prev center coords if no component was detected
             else:
                 cx, cy = self.centerX[-1], self.centerY[-1]
 
@@ -86,7 +87,7 @@ class MouseInfo():
             self.centlist.append(0)
 
         # returns: 300 * z-value
-        # zvalue is alse called standard score
+        # zvalue is a sort of standardize score
         # z = (self.centlist[idx] - np.mean(self.centlist))/np.std(self.centlist)
         # return 300 * np.abs(z)
 
@@ -113,8 +114,7 @@ def select_options() -> Options:
 
 
 def get_ans(question: str, selections: Union[List[str], List[int]] = ['y', 'n']):
-    """Question and receive a selection
-    """
+    """Question and receive a selection"""
     reply = input(question)
     selections = list(map(str,  selections))
     if reply in selections:
@@ -144,8 +144,8 @@ def list_to_comma_str(lis: List[Any]) -> str:
     return ', '.join(map(str, lis))
 
 
-def show_window(title: str, message: str,
-                button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
+def show_msg(title: str, message: str,
+             button: str = 'PRESS ENTER KEY', exit_: bool = False) -> None:
     """Show infomation on terminal"""
     print('[{}]\n{}'.format(title, message))
     getpass.getpass('[{}]'.format(button))
@@ -165,8 +165,8 @@ def select_port() -> Serial:
     ports = list_ports.comports()  # get port data
     devices: List[str] = [info.device for info in ports]
     if len(devices) == 0:
-        show_window(str(type(TrackingError)),
-                    'Error: serial device not found', exit_=True)
+        show_msg(str(type(TrackingError)),
+                 'Error: serial device not found', exit_=True)
         raise TrackingError('Error: serial device not found')
     elif len(devices) == 1:
         print('=> Only found: %s' % devices[0])
@@ -185,7 +185,7 @@ def select_port() -> Serial:
         ser.open()
         return ser
     except Exception as e:
-        show_window(
+        show_msg(
             str(type(e)), 'Error: occurs when opening serial', exit_=True)
         raise TrackingError('Error: error occurs when opening serial')
 
@@ -230,7 +230,7 @@ def release(cap_: Optional[cv2.VideoCapture] = None,
     cv2.destroyAllWindows()
 
 
-def video_body(select_port: Serial, mouse_info: MouseInfo,
+def video_body(select_port: Optional[Serial], mouse_info: MouseInfo,
                camera_info: DeviceInfo, save_video: bool,
                save_csv: bool, frame_color: bool) -> None:
     """Process and output a video and logs"""
@@ -251,7 +251,7 @@ def video_body(select_port: Serial, mouse_info: MouseInfo,
         # fps -> int | float
         # window_size -> tuple[int, int]
         avifile = cv2.VideoWriter(
-            nowtime + '.avi', fourcc, fps, window_size)
+            nowtime + '.avi', fourcc, fps, window_size, frame_color)
 
     if save_csv:
         csvfile = open(nowtime + '.csv', 'w')
@@ -287,7 +287,7 @@ def resize_frame(frame: np.ndarray, ratio: float = 0.5) -> np.ndarray:
     return cv2.resize(frame, (int(w*ratio), int(h*ratio)))
 
 
-def _video_body(cap: cv2.VideoCapture, select_port: Serial,
+def _video_body(cap: cv2.VideoCapture, select_port: Optional[Serial],
                 mouse_info: MouseInfo, avifile: Optional[cv2.VideoWriter],
                 csvfile: Optional[IO], frame_color: bool = False) -> None:
     """Helper"""
@@ -301,11 +301,15 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         binarized_frame = binarize(frame)
 
         mouse_info.binarized_frame = binarized_frame
-        info = mouse_info.center_operation(binarized_frame, idx)
+        info = mouse_info.center_operation(binarized_frame)
 
         info_str = str(info)
-        select_port.write(info_str.encode('utf-8'))
-        select_port.write(b'\n')
+
+        # print info data to serial output
+        if type(select_port) is Serial:
+            select_port.write(info_str.encode('utf-8'))  # type: ignore
+            select_port.write(b'\n')  # type: ignore
+            select_port.reset_output_buffer()  # type: ignore
 
         timestamp = datetime.now().strftime(
             '%Y-%m-%d_%H:%M:%S.%f')[:-5]
@@ -313,7 +317,6 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
         # infos := "${ },${elapsed_sec/10},${timestamp}"
         infos = '{},{},{}'.format(
             info_str[0:6], int((t1-t0)/10), timestamp)
-        select_port.reset_output_buffer()
 
         # print timestamp
         print(infos)
@@ -331,8 +334,9 @@ def _video_body(cap: cv2.VideoCapture, select_port: Serial,
             side_by_side = np.hstack(
                 [cv2.cvtColor(binarized_frame, cv2.COLOR_GRAY2BGR), frame])
         else:
-            mono = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            side_by_side = np.hstack([binarized_frame, mono])
+            side_by_side = np.hstack(
+                [binarized_frame, cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)])
+
         if avifile is not None:
             avifile.write(side_by_side)
 
@@ -355,20 +359,25 @@ def main() -> None:
     """Main"""
     print(BANNER)
 
-    s = select_port()
+    s = None
+    if os.environ.get('TEST') != '1':
+        s = select_port()
     m = MouseInfo()
     m.centerX = [0, 0]
     m.centerY = [0, 0]
     m.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     c = DeviceInfo()
+    print(len(sys.argv))
     if len(sys.argv) < 2:
         c.num = select_cam_device_num()
+    else:
+        c.num = 0
 
     options = select_options()
 
-    show_window('info', 'If you quit, type "q" on cam window'
-                        '\nor "Ctrl+C" on terminal.')
+    show_msg('info', 'If you quit, type "q" on cam window'
+             '\nor "Ctrl+C" on terminal.')
 
     video_body(s, m, c, options['save_video'],
                options['save_csv'], options['color_video'])
