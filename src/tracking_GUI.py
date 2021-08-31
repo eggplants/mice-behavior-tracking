@@ -368,7 +368,6 @@ def main() -> None:
     m.centlist = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     c = DeviceInfo()
-    print(len(sys.argv))
     if len(sys.argv) < 2:
         c.num = select_cam_device_num()
     else:
